@@ -2,7 +2,7 @@ import requests
 import sys
 from datetime import datetime
 from urllib.request import urlretrieve
-
+import re
 # lib for excel & mongo
 import xlrd
 import sys
@@ -76,14 +76,37 @@ def openXlsFile (filename):
     data = xlrd.open_workbook(filename+'.xls')
 
 def toDB ():
+    #连接数据库
     _client = MongoClient('localhost',27017)
-    _db = _client.scrapy
-    _data = xlrd.open_workbook(filePath + 'Historical_Quote_Data_2006.xls')
-    _table = data.sheets()[0]
+    _db = _client['shibor']
+    _dbTable = _db['shibor'] #变量
+    _data = xlrd.open_workbook(filePath + 'Historical_Shibor_Data_2016.xls')
+    _table = _data.sheets()[0]
     _th = _table.row_values(0)
     _tr = _table.nrows
-    print(_th)
+    _row = {}
+    for i in range(1,_tr):
+        __tr = formatTr(_table.row_values(i))
+        _row[i] = json.dumps(dict(zip(_th,__tr)))
+        _row[i] = json.loads(_row[i])
+        print(_row[i])
+        # _dbTable.insert(_row[i])
+    # print(_tr)
+
+def formatTr(tr):
+    _arr = []
+    for i in tr:
+        #时间转换
+        if len(re.findall('\/',i)) == 2:
+            __date = re.split('/',i)
+            __date = __date[2] + '-' + __date[1] + '-' + __date[0] + ' 00:00:00'
+            _arr.append(__date)
+        else:
+            _arr.append(tr[i])
+    
+    return _arr
 
 if __name__ == "__main__":
     # getFileList()
     toDB()
+    
