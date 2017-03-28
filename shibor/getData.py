@@ -43,6 +43,10 @@ fileDic = {
 }
 filePath = sys.path[0] +'/files/'
 
+startYear = 2006
+thisYear = datetime.now().year
+typeList = ('shibor','report','shiborAva')
+
 def getFile(year,type):
     # date's format like Year YYYY
     _date = str(year)
@@ -62,51 +66,67 @@ def getFile(year,type):
     #     return _req.content
 
 def getFileList():
-    _startYear = 2006
-    _thisYear = datetime.now().year
-    _typeList = ('shibor','report','shiborAva')
+    
     # TODO 完善循环体
-    for type in _typeList:
-        __nowYear = _startYear
-        while __nowYear <= _thisYear:
+    for type in typeList:
+        __nowYear = startYear
+        while __nowYear <= thisYear:
             getFile(__nowYear,type)
             __nowYear += + 1
 
-def openXlsFile (filename):
-    data = xlrd.open_workbook(filename+'.xls')
 
-def toDB ():
+def toDB (
+    type = 'shibor',
+    year = startYear
+    ):
+    _DBName = 'shibor'
     #连接数据库
     _client = MongoClient('localhost',27017)
-    _db = _client['shibor']
-    _dbTable = _db['shibor'] #变量
-    _data = xlrd.open_workbook(filePath + 'Historical_Shibor_Data_2016.xls')
+    # 删除数据库
+    # _client.drop_database(_DBName)
+    # 新建数据库
+    _db = _client[_DBName]
+    _dbTable = _db[type] #变量
+    _data = xlrd.open_workbook(filePath + fileDic[type][0] + str(year) +'.xls')
     _table = _data.sheets()[0]
     _th = _table.row_values(0)
-    _tr = _table.nrows
+    _trs = _table.nrows
     _row = {}
-    for i in range(1,_tr):
+    # th添加timestamp 为ID
+    _th[0] = 'Date'
+    _th.insert(0,'timestamp')
+    
+    # 添加数据到数据库
+    for i in range(1,_trs):
         __tr = formatTr(_table.row_values(i))
         _row[i] = json.dumps(dict(zip(_th,__tr)))
         _row[i] = json.loads(_row[i])
-        print(_row[i])
-        # _dbTable.insert(_row[i])
-    # print(_tr)
+        _dbTable.insert(_row[i])
 
-def formatTr(tr):
-    _arr = []
-    for i in tr:
-        #时间转换
-        if len(re.findall('\/',i)) == 2:
-            __date = re.split('/',i)
-            __date = __date[2] + '-' + __date[1] + '-' + __date[0] + ' 00:00:00'
-            _arr.append(__date)
-        else:
-            _arr.append(tr[i])
-    
+# 返回 原行数据，并在第一位插入时间戳作为唯一识别id
+def formatTr(
+    tr= [] #行数据
+    ):
+    _arr = tr
+    #时间转换
+    _dateCell = xlrd.xldate.xldate_as_datetime(tr[0],0)
+    _arr[0] = _dateCell.strftime('%Y-%m-%d')
+    # 添加时间戳为ID 单位毫秒
+    _arr.insert(0,int(int(datetime.timestamp(_dateCell))))
     return _arr
+
+def fillDB():
+    for type in typeList:
+        for year in range(startYear,thisYear):
+            toDB(type,year)
+            print('Filling Date:Year|'+str(year) +',type|'+type )
+
 
 if __name__ == "__main__":
     # getFileList()
-    toDB()
+
+    # 灌入数据
+    fillDB()
+
+    # cleanData()
     
