@@ -88,7 +88,8 @@ def apiShibor():
         'start':start,
         'end':end
     }
-    # TODO 完善 API接口
+    # TODO 返回数据json格式化
+    # 
     print(apiRetData(getData('shibor',_conditions)))
         # return 'Post %d' % post_id
 
