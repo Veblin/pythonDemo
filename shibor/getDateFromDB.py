@@ -5,7 +5,7 @@ import json
 import pymongo
 from pymongo import MongoClient
 import flask 
-from flask import request,Flask
+from flask import request,Flask,jsonify,make_response
 
 _conditions = {
     'start':'2016-01-01',
@@ -45,6 +45,18 @@ def formatDateTime (str):
         return
 
 def apiRetData(data):
+    # 格式化数据
+    # [{
+    #     'x': [{
+    #         'date': '2016-03-30'
+    #     }],
+    #     'y': [{
+    #         'O/N': 2.004,
+    #         '1W': 2.312,
+    #        ....
+    #     }]
+    # },
+    # .....
     api = []
     yKey = ['O/N','1W','2W','3M','6M','9M','1Y']
     for i in range(0,len(data)):
@@ -72,30 +84,53 @@ def fillData(data,arr):
 
     return res
 
+#跨域
+def modHttp(origin=None):
+    def allow_cross_domain(fun):
+        def wrapper_fun(*args, **kwargs):
+            resp = make_response(*args, **kwargs)
+            resp.headers['Access-Control-Allow-Origin'] = origin
+            return resp
+        fun.provide_automatic_options = False
+        return wrapper_fun
+    print('modHttp')
+    return allow_cross_domain
 
 
-
-@app.route('/api/shibor',methods = ['POST'])
+@app.route('/api/shibor',methods = ['POST','GET'])
+# TODO 解决跨域问题
+@modHttp(origin='localhost')
 def apiShibor():
+    print('apiShibor')
     # show the post with the given id, the id is an integer
     start = request.values['start_time']
     end =  request.values['end_time']
-    if start is None or end is None:
-        abort(400)
     
+    if start is None or end is None:
+        _message = 'POST data is wrong'
     
     _conditions={
         'start':start,
         'end':end
     }
-    # TODO 返回数据json格式化
+    _data = apiRetData(getData('shibor',_conditions))
+    _message = ''
+    _code = 200
+    if len(_data) == 0:
+        _message = 'No Data'
+    else:
+        _message = 'Success'
+        
     # 
-    print(apiRetData(getData('shibor',_conditions)))
-        # return 'Post %d' % post_id
+    # print(getBaseReturnValue(_data,_message,_code))
+    return getBaseReturnValue(_data,_message,_code)
 
+def getBaseReturnValue(data,msg,code):
+    _json_data = jsonify({'datas':data,'msg':msg,'success':code})
+    return _json_data
 
 
 if __name__ == "__main__":
     # 返回数据
-    app.run()
+    app.run(debug=True)
     
