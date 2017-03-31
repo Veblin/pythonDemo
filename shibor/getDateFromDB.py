@@ -103,36 +103,33 @@ def allow_cross_domain(fun):
 # 更新： webpack devserver 做的proxy 代理 似乎无法转发post的data，考虑尝试其他跨域方案。比如oauth授权
 @allow_cross_domain
 def apiShibor():
-    print('apiShibor1111') 
+    _message = ''
+    _code = 200
     # show the post with the given id, the id is an integer
     # try:
     if len(request.values) == 0:
         print('There is no request values')
-        return     
+        _message = 'POST data is wrong'
+        return 
 
     start = request.values['start_time']
     end =  request.values['end_time']
     # finally:
         
-
-    print('apiShibor2222') 
-    if start is None or end is None:
-        _message = 'POST data is wrong'
     
     _conditions={
         'start':start,
         'end':end
     }
-    _data = apiRetData(getData('shibor',_conditions))
-    _message = ''
-    _code = 200
+    data = apiRetData(getData('shibor',_conditions))
+
     if len(_data) == 0:
         _message = 'No Data'
     else:
         _message = 'Success'
     
     # 
-    print(getBaseReturnValue(_data,_message,_code))
+    # print(getBaseReturnValue(_data,_message,_code))
     return getBaseReturnValue(_data,_message,_code)
 
 def getBaseReturnValue(data,msg,code):
