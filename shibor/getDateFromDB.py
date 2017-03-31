@@ -5,6 +5,7 @@ import json
 import pymongo
 from pymongo import MongoClient
 import flask 
+from functools import wraps
 from flask import request,Flask,jsonify,make_response
 
 _conditions = {
@@ -85,27 +86,36 @@ def fillData(data,arr):
     return res
 
 #跨域
-def modHttp(origin=None):
-    def allow_cross_domain(fun):
-        def wrapper_fun(*args, **kwargs):
-            resp = make_response(*args, **kwargs)
-            resp.headers['Access-Control-Allow-Origin'] = origin
-            return resp
-        fun.provide_automatic_options = False
-        return wrapper_fun
-    print('modHttp')
-    return allow_cross_domain
-
+def allow_cross_domain(fun):
+    @wraps(fun)
+    def wrapper_fun(*args, **kwargs):
+        print('allow_cross_domain')
+        rst = make_response(fun(*args, **kwargs))
+        rst.headers['Access-Control-Allow-Origin'] = '*'
+        rst.headers['Access-Control-Allow-Methods'] = 'PUT,GET,POST,DELETE'
+        allow_headers = "Referer,Accept,Origin,User-Agent"
+        rst.headers['Access-Control-Allow-Headers'] = allow_headers
+        return rst
+    return wrapper_fun
 
 @app.route('/api/shibor',methods = ['POST','GET'])
 # TODO 解决跨域问题
-@modHttp(origin='localhost')
+# 更新： webpack devserver 做的proxy 代理 似乎无法转发post的data，考虑尝试其他跨域方案。比如oauth授权
+@allow_cross_domain
 def apiShibor():
-    print('apiShibor')
+    print('apiShibor1111') 
     # show the post with the given id, the id is an integer
+    # try:
+    if len(request.values) == 0:
+        print('There is no request values')
+        return     
+
     start = request.values['start_time']
     end =  request.values['end_time']
-    
+    # finally:
+        
+
+    print('apiShibor2222') 
     if start is None or end is None:
         _message = 'POST data is wrong'
     
@@ -120,9 +130,9 @@ def apiShibor():
         _message = 'No Data'
     else:
         _message = 'Success'
-        
+    
     # 
-    # print(getBaseReturnValue(_data,_message,_code))
+    print(getBaseReturnValue(_data,_message,_code))
     return getBaseReturnValue(_data,_message,_code)
 
 def getBaseReturnValue(data,msg,code):
