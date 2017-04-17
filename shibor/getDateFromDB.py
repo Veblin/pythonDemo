@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime,timedelta
 from urllib.request import urlretrieve
 import sys
 import json
@@ -8,10 +8,21 @@ import flask
 from functools import wraps
 from flask import request,Flask,jsonify,make_response
 
+# 获取相对于当前 或前后多少天
+def getFromTodayDays(
+    dayNum = 0
+):
+    _days = datetime.today() + timedelta(days=dayNum)
+    _days = _days.strftime("%Y-%m-%d")
+    return _days
+
+_today = getFromTodayDays()
+_30DaysAgo = getFromTodayDays(-30)
 _conditions = {
-    'start':'2016-01-01',
-    'end':'2016-04-01'
+    'start':_30DaysAgo,
+    'end':_today
 }
+
 
 app = Flask(__name__)
 
@@ -132,8 +143,8 @@ def apiShibor():
     # print(getBaseReturnValue(_data,_message,_code))
     return getBaseReturnValue(_data,_message,_code)
 
-def getBaseReturnValue(data,msg,code):
-    _json_data = jsonify({'datas':data,'msg':msg,'success':code})
+def getBaseReturnValue(data,msg,code,conditions):
+    _json_data = jsonify({'datas':data,'msg':msg,'success':code,'conditions':_conditions})
     return _json_data
 
 

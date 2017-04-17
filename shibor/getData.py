@@ -123,10 +123,10 @@ def fillDB():
 
 
 if __name__ == "__main__":
-    # getFileList()
+    getFileList()
 
     # 灌入数据
-    fillDB()
+    # fillDB()
 
     # cleanData()
     
