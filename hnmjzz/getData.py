@@ -131,13 +131,20 @@ def getDataFrom_jbqk_show(urls):
         _res = {
             'id':_ids[1]
         }
-        
+        _key = []
+        _val = []
         for index in range(0,len(_data)):
-            __row = _data[index]
-            for row in range (0,len(__row)):
-                # TODO 页面解析
-                if row%2 == 0:
-                    
+            __row = _data[index].find_all('td')
+            if index == 13 || index == 14:
+                # TODO 社团刊物 子数据结构
+
+            for row in range (1,len(__row)):
+                #页面解析
+                # key
+                if row%2 == 1:
+                    _key.append(__row[row].text)
+                else:
+                    _val.append(__row[row].text)
 
 
         _arr.append(_res)
