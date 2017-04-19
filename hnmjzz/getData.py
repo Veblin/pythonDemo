@@ -113,6 +113,23 @@ def makeUrlList (s,e):
     with open('hn.json', 'w',encoding='utf-8') as f:  
         f.write(json.dumps(_json,ensure_ascii=False))
 
+def clearCellText (string,reg):
+    _string = ''
+    if type(string) == str:
+        _string = string
+    else:
+        _string = str(string)
+    
+    _string = _string.strip()
+    
+    return _string.replace(reg,'')
+def clearBSCellText (bsObj):
+    _string = ''
+    for string in bsObj.stripped_strings:
+        _string = string
+    
+    return _string
+
 def getDataFrom_jbqk_show(urls):
     _arr = []
     
@@ -131,24 +148,47 @@ def getDataFrom_jbqk_show(urls):
         _res = {
             'id':_ids[1]
         }
-        _key = []
-        _val = []
-        for index in range(0,len(_data)):
+        __obj = {}
+        __childObj = {}
+        __parentKey = []
+        __parentVal = []    
+        print(__url+':'+__mess)
+        for index in range(1,len(_data)):
             __row = _data[index].find_all('td')
-            if index == 13 || index == 14:
+            
+            __childKeys = []
+            __childVals = []
+            if index == 13 or index == 14:
                 # TODO 社团刊物 子数据结构
+                # 清洗 '发证时间\xa0' 中的 \xa0
+                for row in range (0,len(__row)):
+                    __text = clearBSCellText(__row[row])
+                    if row%2 == 0:
+                        __childKeys.append(__text)
+                    else:
+                        __childVals.append(__text)
 
-            for row in range (1,len(__row)):
-                #页面解析
-                # key
-                if row%2 == 1:
-                    _key.append(__row[row].text)
-                else:
-                    _val.append(__row[row].text)
+                __childObj = dict(zip(__childKeys,__childVals))
 
+            else:
+                __cell = __row
+                for row in range (0,len(__row)):
+                    __text = clearBSCellText(__row[row])
+                    
+                    #页面解析
+                    # key
+                
+                    if row%2 == 0:
+                        if __text != '' and clearBSCellText(__row[row+1]) != '':
+                            __parentKey.append(__text)
+                    else:
+                        if __text != '' and clearBSCellText(__row[row-1]) != '':
+                            __parentVal.append(__text)
+
+                __obj = dict(zip(__parentKey,__parentVal))
 
         _arr.append(_res)
-        print(__url+':'+__mess)
+        
 
     return _arr
 
@@ -165,4 +205,4 @@ def make_jbqk_show(s,e):
 
 if __name__ == '__main__':
     # makeUrlList(2060,2070)
-    make_jbqk_show(1,5)
+    make_jbqk_show(1,2)
