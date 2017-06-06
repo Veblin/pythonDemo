@@ -35,7 +35,7 @@ _dict = {
     '个人会员':'',
     '分支机构代表机构数':''
 }
-
+jsonArr = []
 
 def getHtmlDom(url):
     # 从 url中获取当前页面所有数据
@@ -85,9 +85,7 @@ def getDataFromPages (urls):
             #     },]
             # }
             _res = {
-                'id':_ids[1],
-                'name':_data[1].td.text,
-                'lists':[]
+                'id':_ids[1]
             }
             
             _th = fixTdData(makeStr2Arr(_data[0].text))[1:]
@@ -131,7 +129,6 @@ def clearBSCellText (bsObj):
     return _string
 
 def getDataFrom_jbqk_show(urls):
-    _arr = []
     
     for i in range(0,len(urls)):
         __mess = '获取数据...'
@@ -139,46 +136,79 @@ def getDataFrom_jbqk_show(urls):
         _page = getHtmlDom(__url)
         # 从url获取id
         _ids = __url.split('?')[1].split('=')
-        _dataTable = _page.select('table table table')[0]
+        _tables = _page.select('table table table')
+        if len(_tables) < 1 :
+            # 页面无数据
+            __mess = '无数据，下一个'
+            continue
+        
+        _dataTable = _tables[0]
         _data = _dataTable.find_all('tr')
             # 返回格式{
             #     id:id, 来源ArticleID
-            #     name:'xxx'
+            #     data:'xxx'
             # }
         _res = {
             'id':_ids[1]
         }
         __obj = {}
-        __childObj = {}
+        __child1Obj = {} # 
+        __child2Obj = {}
         __parentKey = []
         __parentVal = []    
+        __child2Keys = []
+        __child2Vals = []
         print(__url+':'+__mess)
+        # 遍历表格
         for index in range(1,len(_data)):
             __row = _data[index].find_all('td')
-            
-            __childKeys = []
-            __childVals = []
-            if index == 13 or index == 14:
-                # TODO 社团刊物 子数据结构
-                # 清洗 '发证时间\xa0' 中的 \xa0
-                for row in range (0,len(__row)):
+            if index == 10 :
+                #  __child1Obj 社团刊物 子数据结构
+                __childKeys = []
+                __childVals = []
+                for row in range (2,len(__row)):
                     __text = clearBSCellText(__row[row])
                     if row%2 == 0:
                         __childKeys.append(__text)
                     else:
+                        # 过滤空格
+                        __text = re.findall('(\d+|[\u4e00-\u9fa5]+)[^\s]',__text)
+                        if len(__text)>0 : 
+                            __text = __text[0]
+                        else:
+                            __text = '0'
+
                         __childVals.append(__text)
 
-                __childObj = dict(zip(__childKeys,__childVals))
+                __child1Obj = dict(zip(__childKeys,__childVals))
+            elif index == 13 :
+                    #  __child2Obj 社团刊物 子数据结构
+                for row in range (1,len(__row)):
+                    __text = clearBSCellText(__row[row])
+                    if row%2 != 0:
+                        __child2Keys.append(__text)
+                    else:
+                        __child2Vals.append(__text)
+                        
+                
+            elif index == 14:
+                for row in range (0,len(__row)):
+                    __text = clearBSCellText(__row[row])
+                    if row%2 == 0:
+                        __child2Keys.append(__text)
+                    else:
+                        __child2Vals.append(__text)
 
+                __child2Obj = dict(zip(__child2Keys,__child2Vals))
             else:
                 __cell = __row
                 for row in range (0,len(__row)):
                     __text = clearBSCellText(__row[row])
-                    
+                    # print('index:'+str(index) + ',text:'+__text)
                     #页面解析
                     # key
                 
-                    if row%2 == 0:
+                    if row%2 == 0 and row < len(__row) - 1:
                         if __text != '' and clearBSCellText(__row[row+1]) != '':
                             __parentKey.append(__text)
                     else:
@@ -186,23 +216,24 @@ def getDataFrom_jbqk_show(urls):
                             __parentVal.append(__text)
 
                 __obj = dict(zip(__parentKey,__parentVal))
+            
+                # 手动添加 会费标准和社团刊物
+                __obj['会费标准'] = __child1Obj
+                __obj['社团刊物'] = __child2Obj
+                _res['data'] = __obj
 
-        _arr.append(_res)
-        
-
-    return _arr
+        jsonArr.append(_res)
 
 def make_jbqk_show(s,e):
     _url = []
-    _json = {}
     for i in range(s,e):
         _url.append('http://www.hnmjzz.org.cn/jbqk_show.asp?ArticleID='+str(i))
     
-    _json = getDataFrom_jbqk_show(_url)
-    # with open('jbqk_show.json', 'w',encoding='utf-8') as f:  
-    #     f.write(json.dumps(_json,ensure_ascii=False))
-
+    getDataFrom_jbqk_show(_url)
+    with open('jbqk_show.json', 'w',encoding='utf-8') as f:  
+        f.write(json.dumps(jsonArr,ensure_ascii=False))
+    print(jsonArr)
 
 if __name__ == '__main__':
     # makeUrlList(2060,2070)
-    make_jbqk_show(1,2)
+    make_jbqk_show(1,500)
